@@ -177,7 +177,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-medium">Password</label>
                 <Link
-                  href="#"
+                  href="/forgot-password"
                   className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
                   Forgot password?

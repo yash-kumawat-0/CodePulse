@@ -43,3 +43,21 @@ export function useLogout() {
     },
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const response = await apiClient.post('/auth/forgot-password', { email });
+      return extractData<{ success: boolean; message: string; token?: string }>(response);
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async ({ token, password }: { token: string; password: string }) => {
+      const response = await apiClient.post('/auth/reset-password', { token, password });
+      return extractData<{ success: boolean; message: string }>(response);
+    },
+  });
+}
