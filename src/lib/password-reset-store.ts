@@ -127,3 +127,4 @@ export function completePasswordReset(token: string): boolean {
 
   return true;
 }
+

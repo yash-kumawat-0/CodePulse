@@ -25,6 +25,7 @@ import {
   verifyResetToken,
   completePasswordReset,
 } from "@/lib/password-reset-store";
+import { updateUserPassword } from "@/lib/auth-store";
 
 const resetPasswordSchema = z
   .object({
@@ -112,6 +113,11 @@ function ResetPasswordContent() {
         });
         setTokenValidity({ valid: false, reason: "used" });
         return;
+      }
+
+      // Persist the updated password for this email account
+      if (tokenValidity.email) {
+        updateUserPassword(tokenValidity.email, data.password);
       }
 
       setIsSuccess(true);
@@ -435,3 +441,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

@@ -19,12 +19,11 @@ import {
   ExternalLink,
   Flame,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  createPasswordResetRequest,
-  getResetTokens,
-} from "@/lib/password-reset-store";
+import { createPasswordResetRequest } from "@/lib/password-reset-store";
+import { isEmailRegistered } from "@/lib/auth-store";
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -41,10 +40,12 @@ export default function ForgotPasswordPage() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [resendCountdown, setResendCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [unregisteredError, setUnregisteredError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -69,9 +70,22 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordForm) => {
     setIsLoading(true);
+    setUnregisteredError(null);
+
     try {
-      // Simulate network latency for authentic feel
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Simulate network request
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Check if email is registered
+      if (!isEmailRegistered(data.email)) {
+        setIsLoading(false);
+        const errMsg = "This email is not registered with any DevBattle account.";
+        setUnregisteredError(errMsg);
+        toast.error("Email not found", {
+          description: "No account exists with this email address. Please check your spelling or sign up.",
+        });
+        return;
+      }
 
       const result = createPasswordResetRequest(data.email);
       setGeneratedToken(result.token);
@@ -104,6 +118,11 @@ export default function ForgotPasswordPage() {
     toast.success("New reset link sent!", {
       description: `A fresh link has been issued for ${submittedEmail}`,
     });
+  };
+
+  const handleSelectDemo = (email: string) => {
+    setValue("email", email, { shouldValidate: true });
+    setUnregisteredError(null);
   };
 
   return (
@@ -251,10 +270,30 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
-                <p className="text-muted-foreground mb-8 text-sm">
-                  No worries! Enter your registered account email and we&apos;ll send
+                <p className="text-muted-foreground mb-6 text-sm">
+                  Enter your registered account email and we&apos;ll send
                   you secure instructions to reset your password.
                 </p>
+
+                {/* Unregistered Email Alert */}
+                {unregisteredError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3.5 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs flex items-start gap-2.5"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div>
+                      <p className="font-medium">{unregisteredError}</p>
+                      <Link
+                        href="/signup"
+                        className="underline font-semibold mt-1 inline-block text-amber-300 hover:text-amber-200"
+                      >
+                        Don&apos;t have an account? Sign up here →
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div>
@@ -289,7 +328,7 @@ export default function ForgotPasswordPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Sending reset instructions...
+                        Verifying & sending link...
                       </>
                     ) : (
                       <>
@@ -299,6 +338,32 @@ export default function ForgotPasswordPage() {
                     )}
                   </motion.button>
                 </form>
+
+                {/* Quick Registered Accounts Selector */}
+                <div className="mt-6 p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-mono text-muted-foreground uppercase flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      Sample Registered Accounts
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDemo("developer@github.com")}
+                      className="flex-1 text-[11px] py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors text-center border border-white/5 font-mono truncate"
+                    >
+                      developer@github.com
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDemo("demo@devbattle.com")}
+                      className="flex-1 text-[11px] py-1.5 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors text-center border border-white/5 font-mono truncate"
+                    >
+                      demo@devbattle.com
+                    </button>
+                  </div>
+                </div>
 
                 <div className="mt-8 pt-6 border-t border-white/10 text-center">
                   <Link
@@ -352,7 +417,7 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                {/* Quick Evaluator / Demo Link to Test Reset Password */}
+                {/* Direct Demo Link to Test Reset Password */}
                 {generatedToken && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}

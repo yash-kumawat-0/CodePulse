@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { GithubIcon } from "@/components/icons/github";
 import { toast } from "sonner";
+import { registerUserAccount } from "@/lib/auth-store";
 
 const signupSchema = z
   .object({
@@ -41,10 +43,12 @@ const steps = [
 ];
 
 export default function SignupPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [cachedData, setCachedData] = useState<SignupForm | null>(null);
 
   const {
     register,
@@ -60,16 +64,43 @@ export default function SignupPage() {
   ];
 
   const onSubmit = async (data: SignupForm) => {
+    setCachedData(data);
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
       return;
     }
+    await handleCompleteRegistration(data);
+  };
+
+  const handleCompleteRegistration = async (dataToRegister?: SignupForm) => {
+    const data = dataToRegister || cachedData;
+    if (!data) return;
+
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    toast.success("Account created!", {
-      description: `Welcome to DevBattle, ${data.name}!`,
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const result = registerUserAccount({
+      name: data.name,
+      email: data.email,
+      password: data.password,
     });
+
+    setIsLoading(false);
+
+    if (!result.success) {
+      toast.error("Registration failed", {
+        description: result.error || "Could not register account.",
+      });
+      return;
+    }
+
+    toast.success("Account created!", {
+      description: `Welcome to DevBattle, ${data.name}! Redirecting...`,
+    });
+
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 600);
   };
 
   return (
@@ -128,7 +159,7 @@ export default function SignupPage() {
           </motion.div>
 
           <div className="text-xs text-muted-foreground">
-            © 2024 DevBattle. All rights reserved.
+            © 2026 CodePulse (DevBattle). All rights reserved.
           </div>
         </div>
       </div>
@@ -266,7 +297,7 @@ export default function SignupPage() {
                   type="submit"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium shadow-lg shadow-purple-500/20"
                 >
                   Continue
                   <ArrowRight className="w-4 h-4" />
@@ -371,13 +402,7 @@ export default function SignupPage() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   disabled={isLoading}
-                  onClick={() => {
-                    setIsLoading(true);
-                    setTimeout(() => {
-                      setIsLoading(false);
-                      toast.success("Welcome to DevBattle! 🎉");
-                    }, 1500);
-                  }}
+                  onClick={() => handleCompleteRegistration()}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium disabled:opacity-50"
                 >
                   {isLoading ? (
